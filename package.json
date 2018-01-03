@@ -1,11 +1,11 @@
 {
-  "name": "flashcards-api",
+  "name": "express-jwt-mongo-boilerplate",
   "version": "0.0.1",
-  "description": "API server for FlashCards",
+  "description": "API server",
   "main": "server.js",
-  "repository": "https://dev-z@bitbucket.org/teamx11/flashcards-api.git",
+  "repository": "https://github.com/dev-z/Express-JWT-MongoDB-Mocha-boilerplate.git",
   "author": "<ishtiaque.zafar92@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "body-parser": "^1.17.2",
     "cors": "^2.8.4",
