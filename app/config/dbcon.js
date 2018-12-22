@@ -8,9 +8,7 @@ function connectDB() {
   // Setting Mongoose to use ES6 native promises.
   global.mongoose.Promise = global.Promise;
   // Create the connection url based on the env properties.
-  // eslint-disable-next-line
-  // let db = (process.env.ENV === 'production' ? 'prod' : (process.env.ENV === 'test' ? 'test' : 'dev'));
-  const db = process.env.DB_DB;
+  const db = process.env.DB_NAME;
   let userPass = '';
   if (process.env.DB_USER) {
     userPass = process.env.DB_USER;
@@ -18,14 +16,19 @@ function connectDB() {
       userPass = `${process.env.DB_USER}:${process.env.DB_PASS}`;
     }
   }
-  const uri = `mongodb://${userPass}@${process.env.DB_HOST}:${process.env.DB_PORT}/${db}`;
+  let hostPort = process.env.DB_HOST;
+  if (process.env.DB_PORT) {
+    hostPort = `${process.env.DB_HOST}:${process.env.DB_PORT}`;
+  }
+  const uri = `mongodb+srv://${userPass}@${hostPort}/${db}`;
   const opts = {
-    useMongoClient: true,
     config: {
-      autoIndex: true,
+      // NOTE: set autoIndex to false in production mode to boost performance.
+      // In other stages, it remains true.
+      autoIndex: (process.env.STAGE === 'production'),
     },
+    useNewUrlParser: true,
   };
-  // NOTE: set autoIndex to false in production mode to boost performance.
   console.info(`Connecting to DB @ ${uri}`);
   const promise = global.mongoose.connect(uri, opts);
   return promise;

@@ -25,9 +25,9 @@ Quickstart your projects with this API server Boilerplate. Uses ExpressJS, Mongo
 This project uses "dotenv" npm package to store and use enviroment variables.
 Create a .env file in the root folder. Inside this file, the following variables must be declared:
 
-* ENV        : 'production', 'development', 'test' or 'staging'.
+* STAGE      : 'production', 'development', 'test' or 'staging'.
 * PORT       : port on which to run the API server.
-* DB_DB      : Name of the database you want to connect to.
+* DB_NAME    : Name of the database you want to connect to.
 * DB_USER    : username with which to connect to the DB.
 * DB_PASS    : password of the above given user.
 * DB_HOST    : hostname of the server where the DB is located.

@@ -11,7 +11,7 @@ module.exports = function userService() {
       const instance = new global.User(document);
       // If in prod or dev env (any env except testing),
       // isEmailVerified should be false irrespective of what was passed.
-      if (process.env.ENV !== 'test') {
+      if (process.env.STAGE !== 'test') {
         instance.isEmailVerified = false;
       }
       // Mongoose registers validation as a pre('save') hook on every schema by default.
