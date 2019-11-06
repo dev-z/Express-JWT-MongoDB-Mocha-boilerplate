@@ -1,0 +1,11 @@
+# docker-compose.yml
+version: '3.7'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    volumes:
+      - ./data/db:/data/db
+    ports:
+      - 27017:27017

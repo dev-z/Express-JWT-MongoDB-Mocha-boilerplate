@@ -1,4 +1,54 @@
-module.exports = function userService() {
+// Importing models
+const User = require('../models/User');
+const { ERROR_CODES } = require('../constants');
+
+module.exports = (function userService() {
+  // ================================= Private methods ================================= //
+  /**
+   * Removes the unupdateable fields from document. Prevents accidental update of these fields.
+   * @param {Object} document
+   * @returns {Object}
+   */
+  function removeUnupdatableFields(document) {
+    // Create a copy of document to prevent mutating document.
+    const data = JSON.parse(JSON.stringify(document));
+    // Delete critical fields.
+    delete data._id; // eslint-disable-line
+    delete data.email;
+    delete data.password;
+    delete data.doj;
+    delete data.subscribedFeeds;
+    if (data.isDeleted) {
+      // This allows to update the 'isDeleted' field to false, but not true.
+      delete data.isDeleted;
+    }
+
+    return data;
+  }
+
+  /**
+   * Transforms the system error to human understandable format
+   * @param {Object} err mongo err object
+   */
+  function decodeError(err) {
+    switch (err.code) {
+      case 11000:
+        return {
+          success: false,
+          message: 'Email already exists',
+          errorCode: ERROR_CODES.EMAIL_ALREADY_EXISTS,
+          statusCode: 400,
+        };
+      default:
+        return {
+          success: false,
+          message: err.message || 'User creation failed',
+          errorCode: err.code || ERROR_CODES.REQUEST_FAILED,
+          statusCode: 400,
+        };
+    }
+  }
+  // ================================= Public methods ================================= //
   /**
    * @author Ishtiaque
    * @desc Creates a single user and returns the saved User document on success.
@@ -7,34 +57,29 @@ module.exports = function userService() {
    */
   function create(document) {
     const promise = new Promise((resolve, reject) => {
-      /* if (document) { */
-      const instance = new global.User(document);
-      // If in prod or dev env (any env except testing),
+      const instance = new User(document);
+      // If in any env except testing,
       // isEmailVerified should be false irrespective of what was passed.
-      if (process.env.STAGE !== 'test') {
+      if (process.env.NODE_ENV !== 'test') {
         instance.isEmailVerified = false;
       }
       // Mongoose registers validation as a pre('save') hook on every schema by default.
       // http://mongoosejs.com/docs/validation.html
       instance.save((err, user) => {
         if (err) {
-          reject({
-            message: err.message ? err.message : 'User creation failed',
-            error: err.name,
-            code: err.code,
-          });
+          const errRes = decodeError(err);
+          reject(errRes);
         } else {
-          resolve(user);
+          resolve({
+            id: user._id, // eslint-disable-line
+            name: user.name,
+            email: user.email,
+            mobile: user.mobile,
+            dob: user.dob,
+            doj: user.doj,
+          });
         }
       });
-      /* } else {
-        setTimeout(() => {
-          reject({
-            message: 'Invalid Format. Please pass user data as { prop1: val1, prop2: val2, ... } ',
-            error: 'INVALID_FORMAT',
-          });
-        });
-      } */
     });
     return promise;
   } // End create()
@@ -63,7 +108,6 @@ module.exports = function userService() {
         });
       } else {
         // Multiple Users
-        // eslint-disable-next-line
         const filters = parseFilters(rawFilters);
         let limit;
         let skip;
@@ -110,7 +154,6 @@ module.exports = function userService() {
           docToUpdate = { isDeleted: true };
         } else {
           // otherwise remove those uneditable fields if present.
-          // eslint-disable-next-line
           docToUpdate = removeUnupdatableFields(document);
         }
 
@@ -171,30 +214,6 @@ module.exports = function userService() {
     });
     return promise;
   } // End del()
-
-  // --- PRIVATE FUNCTIONS --- //
-
-  /**
-   * Removes the unupdateable fields from document. Prevents accidental update of these fields.
-   * @param {Object} document
-   * @returns {Object}
-   */
-  function removeUnupdatableFields(document) {
-    // Create a copy of document to prevent mutating document.
-    const data = JSON.parse(JSON.stringify(document));
-    // Delete critical fields.
-    delete data._id; // eslint-disable-line
-    delete data.email;
-    delete data.password;
-    delete data.doj;
-    delete data.subscribedFeeds;
-    if (data.isDeleted) {
-      // This allows to update the 'isDeleted' field to false, but not true.
-      delete data.isDeleted;
-    }
-
-    return data;
-  }
 
   /**
    * @desc [PRIVATE] Takes in the query params and converts it into filter, sort and join.
@@ -352,12 +371,8 @@ module.exports = function userService() {
   function isAuthorised(requested, requester) {
     // Check if user_id passed is equal to the requestor's id or not.
     // This does not allow a user to update someone else's account. (Except for admin account)
-    if (requester._id === requested.userId) { // eslint-disable-line
-      return true;
-    } else if (requester.isAdmin) {
-      return true;
-    }
-    return false;
+    // eslint-disable-next-line no-underscore-dangle
+    return ((requester._id === requested.userId) || requester.isAdmin);
   }
 
   return {
@@ -367,4 +382,4 @@ module.exports = function userService() {
     del,
     isAuthorised,
   };
-};
+}());

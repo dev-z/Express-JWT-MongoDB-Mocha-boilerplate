@@ -1,85 +1,157 @@
-module.exports = function authentication() {
+const User = require('../models/User');
+const { GRANT_TYPES, ERROR_CODES, AUTH_TOKEN_TYPE } = require('../constants');
+
+module.exports = (function authentication() {
   /**
    * @author Ishtiaque
-   * @desc Authenticates a User and gives him a token to be used for later requests.
+   * @desc Authenticates a User based on email and password.
+   * Returns user details and tokens
    * @param {String} email
    * @param {String} password
-   * @returns {Promise.<Object|Object>} Object when promise is fulfilled,
-   * Object when promise is rejected.
-   * { success: <Boolean>, message: <String>, error: <Any>, token: <String>, user: <Object> }
+   * @returns {Promise}
    */
-  function authenticate(email, password) {
-    if (!(typeof email === 'string' && typeof password === 'string')) {
-      const errPromise = new Promise((resolve, reject) => {
-        setTimeout(() => {
-          reject({
-            success: false,
-            message: 'Invalid format. Email and Password should be strings. }',
-            error: 'INVALID_FORMAT',
-          });
-        });
+  function authenticateByPassword(email, password) {
+    if (!(email && password)) {
+      return Promise.reject({
+        success: false,
+        message: 'Missing email or password',
+        errorCode: ERROR_CODES.MISSING_REQUIRED_FIELD,
+        statusCode: 400,
       });
-      return errPromise;
     }
-    const promise = new Promise((resolve, reject) => {
+    if (!(typeof email === 'string' && typeof password === 'string')) {
+      return Promise.reject({
+        success: false,
+        message: 'Invalid format. Email and Password should be strings.',
+        error: 'INVALID_FORMAT',
+        statusCode: 400,
+      });
+    }
+    return new Promise((resolve, reject) => {
       // find the user
-      global.User.findOne({ email },
-        'name email mobile +password areasOfInterest subscribedChannels dob doj +isDeleted +isAdmin +isEmailVerified',
+      User.findOne({ email },
+        'name email mobile +password dob doj +isDeleted +isAdmin +isEmailVerified',
         (err, user) => {
           if (err) {
+            console.error(err);
             reject({
               success: false,
-              message: 'Bad Request.',
-              error: err,
+              message: 'Some error occurred. Please try again later',
+              errorCode: ERROR_CODES.USER.READ_FAILED,
+              statusCode: 500,
             });
           } else if (!user) {
-            resolve({ success: false, message: 'Authentication failed. User not found.' });
+            resolve({
+              success: false,
+              message: 'Authentication failed. User not found.',
+              errorCode: ERROR_CODES.USER.NOT_FOUND,
+              statusCode: 200,
+            });
           } else if (user) {
             // check if account is deleted
             if (user.isDeleted) {
-              resolve({ success: false, message: 'Your account is not active.' });
-            } else if (!user.isEmailVerified) {
-              resolve({ success: false, message: 'Your account is not verified.' });
-            } else if (user.password !== password) { // check if password matches
-              resolve({ success: false, message: 'Authentication failed. Wrong password.' });
-            } else {
-              const userObj = {
-                _id: user._id, // eslint-disable-line
-                name: user.name,
-                email: user.email,
-                mobile: user.mobile,
-                dob: user.dob,
-                doj: user.doj,
-                areasOfInterest: user.areasOfInterest,
-                subscribedFeeds: user.subscribedFeeds,
-              };
-              const requesterData = {
-                _id: user._id, // eslint-disable-line
-                email: user.email,
-                isAdmin: user.isAdmin,
-              };
-              // if user is found and password is right
-              // create a token
-              const token = global.jwt.sign(requesterData, process.env.JWT_SECRET, {
-                expiresIn: '24h', // expires in 24 hours
-                issuer: 'flashcards.in',
-              });
-
-              // return the information including token as JSON
               resolve({
-                success: true,
-                message: 'Authentication successfull!',
-                token,
-                user: userObj,
+                success: false,
+                message: 'Your account is not active.',
+                errorCode: ERROR_CODES.USER.INACTIVE,
+                statusCode: 200,
+              });
+            } else if (!user.isEmailVerified) {
+              resolve({
+                success: false,
+                message: 'Your account is not verified.',
+                errorCode: ERROR_CODES.USER.EMAIL_NOT_VERIFIED,
+                statusCode: 200,
+              });
+            } else {
+              user.comparePassword(password, (hashErr, isMatch) => {
+                if (hashErr) {
+                  console.error(hashErr);
+                  resolve({
+                    success: false,
+                    message: 'Invalid credentials.',
+                    errorCode: ERROR_CODES.USER.INVALID_CREDENTIALS,
+                    statusCode: 200,
+                  });
+                } else if (!isMatch) {
+                  resolve({
+                    success: false,
+                    message: 'Invalid credentials.',
+                    errorCode: ERROR_CODES.USER.INVALID_CREDENTIALS,
+                    statusCode: 200,
+                  });
+                } else {
+                  const userObj = {
+                    _id: user._id, // eslint-disable-line
+                    name: user.name,
+                    email: user.email,
+                    mobile: user.mobile,
+                    dob: user.dob,
+                    doj: user.doj,
+                  };
+                  const accessToken = user.createAccessToken();
+                  const refreshToken = user.createRefreshToken();
+                  // return the information including token as JSON
+                  resolve({
+                    statusCode: 200,
+                    success: true,
+                    message: 'Authentication successfull!',
+                    token_type: AUTH_TOKEN_TYPE,
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                    user: userObj,
+                  });
+                }
               });
             }
           }
         });
     });
-    return promise;
+  }
+
+  /**
+   * Authenticates a user based on the refresh token
+   * Returns a access_token and refresh_token
+   * @param {String} refreshToken Refresh token
+   * @returns {Promise}
+   */
+  function authenticateByRefreshToken(refreshToken) {
+    return new Promise((resolve) => resolve({ message: 'Not implemented' }));
+  }
+
+  function authenticate(body) {
+    return new Promise((resolve, reject) => {
+      if (!body.grant_type) {
+        reject({
+          message: '"grant_type" field is required',
+          errorCode: ERROR_CODES.MISSING_REQUIRED_FIELD,
+          statusCode: 400,
+        });
+      } else if (body.grant_type === GRANT_TYPES.REFRESH_TOKEN) {
+        authenticateByRefreshToken(body.refresh_token)
+          .then((res) => {
+            resolve(res);
+          }, (err) => {
+            reject(err);
+          });
+      } else if (body.grant_type === GRANT_TYPES.PASSWORD) {
+        authenticateByPassword(body.email, body.password)
+          .then((res) => {
+            resolve(res);
+          }, (err) => {
+            reject(err);
+          });
+      } else {
+        reject({
+          message: '"grant_type" has invalid value',
+          errorCode: ERROR_CODES.INVALID_FIELD_VALUE,
+          statusCode: 400,
+        });
+      }
+    });
   }
 
   return {
     authenticate,
   };
-};
+}());

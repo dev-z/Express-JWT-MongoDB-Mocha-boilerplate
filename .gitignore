@@ -43,3 +43,6 @@ jspm_packages
 
 # Environment Variables
 .env
+
+# Container data
+data/

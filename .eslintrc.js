@@ -45,6 +45,6 @@ module.exports = {
 
     // Switching off checks for linebreaks
     'linebreak-style': 'off',
-    
+    'prefer-promise-reject-errors': 'off'
   },
 };
