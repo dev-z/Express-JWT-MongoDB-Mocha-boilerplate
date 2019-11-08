@@ -48,6 +48,9 @@ npm install
 npm start
 ```
 
+### Accessing the api docs
+Once your server is up and running, you can access the documentation at http://host:port/api/v1/api-docs/
+
 ## Creating .env file
 
 This project uses "dotenv" npm package to store and use enviroment variables.

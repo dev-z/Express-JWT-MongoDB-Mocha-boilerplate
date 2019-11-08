@@ -7,7 +7,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const compression = require('compression');
+const swaggerUI = require('swagger-ui-express');
+
 const middlewares = require('./app/utils/middlewares');
+const swaggerDoc = require('./openapi.json');
 
 // BASE CONFIGURATIONS -------------------------- //
 const app = express();
@@ -35,6 +38,10 @@ function loadRoutes() {
       message: 'API server is up and running!',
     });
   });
+  // Documentation
+  router.use('/api-docs', swaggerUI.serve);
+  router.get('/api-docs', swaggerUI.setup(swaggerDoc));
+
   // TODO Use middleware to log request details
   // Use middleware to convert request body to camelCase
   router.use(middlewares.camelizer);

@@ -16,7 +16,8 @@
     "humps": "^2.0.1",
     "jsonwebtoken": "^8.5.1",
     "moment": "^2.24.0",
-    "mongoose": "^5.7.7"
+    "mongoose": "^5.7.7",
+    "swagger-ui-express": "^4.1.2"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.3",
