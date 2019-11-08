@@ -28,22 +28,47 @@ module.exports = (function userUtils() {
    * @param {Object} err mongo err object
    */
   function decodeError(err) {
-    switch (err.code) {
-      case 11000:
-        return {
-          success: false,
-          message: 'Email already exists',
-          errorCode: ERROR_CODES.EMAIL_ALREADY_EXISTS,
-          statusCode: 400,
-        };
-      default:
-        return {
-          success: false,
-          message: err.message || 'User creation failed',
-          errorCode: err.code || ERROR_CODES.REQUEST_FAILED,
-          statusCode: 400,
-        };
+    if (err.code) {
+      switch (err.code) {
+        case 11000:
+          return {
+            success: false,
+            message: 'Email already exists',
+            errorCode: ERROR_CODES.EMAIL_ALREADY_EXISTS,
+            statusCode: 400,
+          };
+        default:
+          return {
+            success: false,
+            message: err.message || 'User creation failed',
+            errorCode: err.code || ERROR_CODES.REQUEST_FAILED,
+            statusCode: 400,
+          };
+      }
+    } else if (err.name) {
+      switch (err.name) {
+        case 'ValidationError':
+          return {
+            success: false,
+            message: err.message || 'User creation failed',
+            errorCode: err.code || ERROR_CODES.INVALID_FIELD_VALUE,
+            statusCode: 400,
+          };
+        default:
+          return {
+            success: false,
+            message: err.message || 'User creation failed',
+            errorCode: err.code || ERROR_CODES.INVALID_DATA,
+            statusCode: 400,
+          };
+      }
     }
+    return {
+      success: false,
+      message: err.message || 'User creation failed',
+      errorCode: err.code || ERROR_CODES.REQUEST_FAILED,
+      statusCode: 400,
+    };
   }
 
   /**

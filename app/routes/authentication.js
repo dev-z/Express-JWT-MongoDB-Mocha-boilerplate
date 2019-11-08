@@ -13,9 +13,9 @@ module.exports = function authRoutes(router) {
     authenticationService
       .authenticate(req.body)
       .then((data) => {
-        res.status(200).json(data);
+        res.status(data.statusCode || 200).json(data);
       }, (err) => {
-        res.status(400).json(err);
+        res.status(err.statusCode || 400).json(err);
       });
   });
 };

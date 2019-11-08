@@ -53,7 +53,7 @@ module.exports = (function userService() {
               errorCode: ERROR_CODES.USER.READ_FAILED,
             });
           } else if (!user) {
-            resolve({
+            reject({
               success: true,
               message: 'User not found',
               statusCode: 404,
@@ -78,7 +78,13 @@ module.exports = (function userService() {
           .skip(skip)
           .exec((err, users) => {
             if (err) {
-              reject(err);
+              console.error(err);
+              reject({
+                success: false,
+                message: 'Something went wrong',
+                statusCode: 500,
+                errorCode: ERROR_CODES.USER.READ_FAILED,
+              });
             } else {
               resolve(users.map((user) => user.toClient()));
             }
@@ -98,8 +104,10 @@ module.exports = (function userService() {
   function update(id, document) {
     if (!(id && document)) {
       Promise.reject({
+        success: false,
         message: 'Missing User ID or data to be updated. Please pass data to be updated as { prop1: val1, prop2: val2, ... } }',
-        error: 'MISSING_REQ_PARAM',
+        errorCode: ERROR_CODES.MISSING_REQUIRED_FIELD,
+        statusCode: 400,
       });
     }
     return new Promise((resolve, reject) => {
@@ -118,25 +126,31 @@ module.exports = (function userService() {
         { new: true, strict: true, runValidators: true },
         (err, updtUser) => {
           if (err) {
+            let message = 'Failed to update user';
+            let errorCode = ERROR_CODES.USER.UPDATE_FAILED;
+            if (docToUpdate.isDeleted) {
+              message = 'Failed to delete user';
+              errorCode = ERROR_CODES.USER.DELETE_FAILED;
+            }
             console.error(err);
             reject({
               success: false,
-              message: 'Failed to delete User',
+              message,
               statusCode: 500,
-              errorCode: ERROR_CODES.USER.DELETE_FAILED,
+              errorCode,
+            });
+          } else if (!updtUser) {
+            reject({
+              success: false,
+              message: 'User not found',
+              statusCode: 404,
+              errorCode: ERROR_CODES.USER.NOT_FOUND,
             });
           } else if (docToUpdate.isDeleted) {
             resolve({
               success: true,
               message: 'User successfully deleted.',
-              statusCode: '200',
-            });
-          } else if (!updtUser) {
-            resolve({
-              success: false,
-              message: 'User not found',
-              statusCode: '404',
-              errorCode: ERROR_CODES.USER.NOT_FOUND,
+              statusCode: 200,
             });
           } else {
             resolve(updtUser.toClient());

@@ -1,11 +1,11 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "API Boilerplate",
+    "title": "Node-Express API Boilerplate",
     "description": "This is a boilerplate API server.",
     "termsOfService": "http://example.com/terms/",
     "contact": {
-      "name": "Ishtiaque Zafar",
+      "name": "Md Ishtiaque Zafar",
       "url": "https://dev-z.github.io/support",
       "email": "ishtiaque.zafar92@gmail.com"
     },
@@ -17,7 +17,7 @@
   },
   "servers": [
     {
-      "url": "https://development.gigantic-server.com/api/v1",
+      "url": "https://localhost8000/api/v1",
       "description": "Development server"
     },
     {
@@ -50,18 +50,6 @@
             "type": "string",
             "description": "10 digit mobile number."
           },
-          "areasOfInterest": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "subscribedFeeds": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Feed"
-            }
-          },
           "doj": {
             "type": "string",
             "format": "date-time",
@@ -70,7 +58,11 @@
           "dob": {
             "type": "string",
             "format": "date-time",
-            "description": "Date of birth."
+            "description": "User's Date of birth."
+          },
+          "age": {
+            "type": "number",
+            "description": "Age of User."
           }
         }
       },
@@ -109,14 +101,59 @@
       "GeneralError": {
         "type": "object",
         "properties": {
-          "message": {
-            "type": "string"
-          },
-          "error": {
-            "type": "string"
-          },
           "success": {
-            "type": "boolean"
+            "type": "boolean",
+            "default": false 
+          },
+          "message": {
+            "type": "string",
+            "description": "Human readable error message."
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "A constant stating the error code. e.g.: USER_NOT_FOUND. Use this field for comparison to process the error."
+          },
+          "statusCode": {
+            "type": "number",
+            "description": "HTTP status code"
+          }
+        }
+      },
+      "GeneralSuccess": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "description": "Human readable error message."
+          },
+          "statusCode": {
+            "type": "number",
+            "description": "HTTP status code"
+          }
+        }
+      },
+      "Login": {
+        "type": "object",
+        "required": [
+          "grant_type"
+        ],
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": ["password", "refresh_token"]
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
           }
         }
       }
@@ -126,7 +163,7 @@
         "name": "skip",
         "in": "query",
         "description": "number of items to skip",
-        "required": true,
+        "required": false,
         "schema": {
           "type": "integer",
           "format": "int32"
@@ -136,46 +173,10 @@
         "name": "limit",
         "in": "query",
         "description": "max records to return",
-        "required": true,
+        "required": false,
         "schema": {
           "type": "integer",
           "format": "int32"
-        }
-      }
-    },
-    "responses": {
-      "NotFound": {
-        "description": "Entity not found."
-      },
-      "IllegalInput": {
-        "description": "Illegal input for operation."
-      },
-      "GeneralError": {
-        "description": "General Error",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/GeneralError"
-            }
-          }
-        }
-      },
-      "DeletedSuccess": {
-        "description": "Response when a delete request is successful",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string"
-                },
-                "success": {
-                  "type": "boolean"
-                }
-              }
-            }
-          }
         }
       }
     },
@@ -188,29 +189,52 @@
     }
   },
   "paths": {
-    "/authentication": {
+    "/auth/login": {
       "post": {
         "summary": "Authenticate User",
-        "description": "Authenticates a user with a given email and password.",
+        "description": "Authenticates a user with a given email and password OR refresh_token.",
         "tags": [
           "Authentication"
         ],
+        "requestBody": {
+          "description": "Send credentials. If using grant_type=password, send email and password. If using grant_type=refresh_token, send refresh_token",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "An object which contains the access token and user data",
+            "description": "An object which contains the user data, access token, refreh_token",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": {
-                      "type": "string"
+                    "statusCode": {
+                      "type": "number"
                     },
                     "success": {
                       "type": "boolean"
                     },
-                    "token": {
+                    "message": {
                       "type": "string"
+                    },
+                    "token_type": {
+                      "type": "string",
+                      "description": "describe the type of token. Value will be 'bearer'"
+                    },
+                    "access_token": {
+                      "type": "string",
+                      "description": "Short lived token to provide access to authenticated users to the API"
+                    },
+                    "refresh_token": {
+                      "type": "string",
+                      "description": "A longer lived token which can be used to get new access_token"
                     },
                     "user": {
                       "$ref": "#/components/schemas/User"
@@ -221,14 +245,51 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/GeneralError"
+            "description": "Bad request. errorCode can be one of MISSING_REQUIRED_FIELD, INVALID_FIELD_VALUE, USER_INVALID_CREDENTIALS.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Bad request. errorCode will be USER_EMAIL_NOT_VERIFIED.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bad request. errorCode will be USER_NOT_FOUND, USER_INACTIVE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something went wrong on the server side.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           }
         }
       }
     },
     "/users": {
       "get": {
-        "summary": "List of users",
+        "summary": "List users. Can also be used to search users",
         "description": "Retrieves a list of users based on certain filters",
         "tags": [
           "User"
@@ -294,6 +355,16 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Something went wrong on the server side. errorCode = USER_READ_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           }
         }
       },
@@ -321,6 +392,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. errorCode can be one of INVALID_DATA, INVALID_FIELD_VALUE, EMAIL_ALREADY_EXISTS, REQUEST_FAILED.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
                 }
               }
             }
@@ -355,11 +436,25 @@
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/GeneralError"
-          },
           "404": {
-            "$ref": "#/components/responses/GeneralError"
+            "description": "User not found. errorCode will be USER_NOT_FOUND.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something went wrong on the server side. errorCode will be USER_READ_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           }
         }
       },
@@ -403,13 +498,44 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/GeneralError"
+            "description": "User not found. errorCode will be MISSING_REQUIRED_FIELD.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           },
-          "401": {
-            "$ref": "#/components/responses/GeneralError"
+          "403": {
+            "description": "Forbidden. errorCode will be FORBIDDEN.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/GeneralError"
+            "description": "User not found. errorCode will be USER_NOT_FOUND.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something went wrong on the server side. errorCode will be USER_UPDATE_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           }
         }
       },
@@ -432,13 +558,47 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/components/responses/DeletedSuccess"
+            "$ref": "#/components/schemas/GeneralSuccess"
           },
           "400": {
-            "$ref": "#/components/responses/GeneralError"
+            "description": "User not found. errorCode will be MISSING_REQUIRED_FIELD.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           },
-          "401": {
-            "$ref": "#/components/responses/GeneralError"
+          "403": {
+            "description": "Forbidden. errorCode will be FORBIDDEN.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found. errorCode will be USER_NOT_FOUND.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Something went wrong on the server side. errorCode will be USER_DELETE_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralError"
+                }
+              }
+            }
           }
         }
       }

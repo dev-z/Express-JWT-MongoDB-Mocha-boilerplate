@@ -23,7 +23,7 @@ module.exports = (function authentication() {
       return Promise.reject({
         success: false,
         message: 'Invalid format. Email and Password should be strings.',
-        error: 'INVALID_FORMAT',
+        errorCode: ERROR_CODES.INVALID_FIELD_VALUE,
         statusCode: 400,
       });
     }
@@ -41,44 +41,44 @@ module.exports = (function authentication() {
               statusCode: 500,
             });
           } else if (!user) {
-            resolve({
+            reject({
               success: false,
               message: 'Authentication failed. User not found.',
               errorCode: ERROR_CODES.USER.NOT_FOUND,
-              statusCode: 200,
+              statusCode: 404,
             });
           } else if (user) {
             // check if account is deleted
             if (user.isDeleted) {
-              resolve({
+              reject({
                 success: false,
                 message: 'Your account is not active.',
                 errorCode: ERROR_CODES.USER.INACTIVE,
-                statusCode: 200,
+                statusCode: 404,
               });
             } else if (!user.isEmailVerified) {
-              resolve({
+              reject({
                 success: false,
                 message: 'Your account is not verified.',
                 errorCode: ERROR_CODES.USER.EMAIL_NOT_VERIFIED,
-                statusCode: 200,
+                statusCode: 403,
               });
             } else {
               user.comparePassword(password, (hashErr, isMatch) => {
                 if (hashErr) {
                   console.error(hashErr);
-                  resolve({
+                  reject({
                     success: false,
                     message: 'Invalid credentials.',
                     errorCode: ERROR_CODES.USER.INVALID_CREDENTIALS,
-                    statusCode: 200,
+                    statusCode: 400,
                   });
                 } else if (!isMatch) {
-                  resolve({
+                  reject({
                     success: false,
                     message: 'Invalid credentials.',
                     errorCode: ERROR_CODES.USER.INVALID_CREDENTIALS,
-                    statusCode: 200,
+                    statusCode: 400,
                   });
                 } else {
                   const userObj = user.toClient();

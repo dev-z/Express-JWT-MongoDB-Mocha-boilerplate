@@ -1,4 +1,4 @@
-/* eslint-disable prefer-arrow-callback, func-names, comma-dangle,
+/* eslint-disable prefer-arrow-callback, comma-dangle,
  no-unused-expressions, no-unused-vars */
 // Require the dev-dependencies
 const chai = require('chai');
@@ -10,16 +10,16 @@ const should = chai.should();
 
 chai.use(chaiHttp);
 
-describe('Authentication', function () {
+describe('Authentication', function testAuth() {
   // --- HOOKS ----------------------------------------------------------------------- //
   // runs before all tests in this block
-  before(function (done) {
+  before(function before(done) {
     // A little delay so the DB connection is established and _startServer() is called.
-    setTimeout(function () {
+    setTimeout(function st() {
       // Create global variable for storing some temp data.
       global.tests = {};
       // Clear User table
-      User.remove({}, function (err) {
+      User.remove({}, function cb(err) {
         if (err) {
           console.error('Error in clearing User model. ', err);
         }
