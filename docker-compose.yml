@@ -7,5 +7,23 @@ services:
     container_name: mongo
     volumes:
       - ./data/db:/data/db
+    expose:
+      - 27017
+
+  app:
+    build: ./
+    image: izafar/node-api-seed:latest
+    container_name: node-api-seed
+    env_file: .env
+    environment:
+      - DB_HOST=mongo
+      - DB_PORT=27017
+    volumes:
+      - ./:/usr/src/app
+    depends_on:
+      - mongo
+    links:
+      - mongo
     ports:
-      - 27017:27017
+      - ${PORT}:${PORT}
+    

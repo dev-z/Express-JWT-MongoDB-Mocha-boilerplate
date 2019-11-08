@@ -2,7 +2,7 @@
  *                API Server                       *
  * ----------------------------------------------- */
 // Importing the core modules ------------------- //
-require('dotenv').config();
+// require('dotenv').config(); // Uncomment this when running locally
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -58,7 +58,7 @@ function loadRoutes() {
 
 function startServer() {
   loadRoutes();
-  const port = process.env.PORT || 8001;
+  const port = process.env.PORT || 8000;
   app.listen(port, () => {
     console.info(`API Server up and running on port ${port} in ${process.env.NODE_ENV} mode.`);
   });

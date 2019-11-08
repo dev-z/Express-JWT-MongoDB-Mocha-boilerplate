@@ -102,7 +102,7 @@ module.exports = (function createUserSchema() {
     };
     const token = jwt.sign(requesterData, process.env.JWT_SECRET, {
       expiresIn: '15m', // expires in 15 minutes
-      issuer: process.env.JWT_ISSUER,
+      issuer: process.env.JWT_ISSUER || 'node-api-server',
     });
     return token;
   };
@@ -116,7 +116,7 @@ module.exports = (function createUserSchema() {
     };
     const token = jwt.sign(requesterData, process.env.JWT_SECRET, {
       expiresIn: '24h', // expires in 15 minutes
-      issuer: process.env.JWT_ISSUER,
+      issuer: process.env.JWT_ISSUER || 'node-api-server',
     });
     return token;
   };
