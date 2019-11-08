@@ -6,13 +6,16 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
+const compression = require('compression');
+const middlewares = require('./app/utils/middlewares');
 
 // BASE CONFIGURATIONS -------------------------- //
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors());
+// compress all responses
+app.use(compression());
 
 // Require route initiator functions ----------- //
 const userRoutes = require('./app/routes/user');
@@ -32,43 +35,16 @@ function loadRoutes() {
       message: 'API server is up and running!',
     });
   });
+  // TODO Use middleware to log request details
+  // Use middleware to convert request body to camelCase
+  router.use(middlewares.camelizer);
   // Authentcation routes
   authRoutes(router);
   // User unprotected routes
   userUnprotectedRoutes(router);
 
   // Auth Middleware to use for all requests defined below
-  router.use((req, res, next) => {
-    // Authenticating the incoming requests for all routes listed below this function.
-    // check header or url parameters for token
-    const token = req.query.token || req.headers['x-access-token'];
-
-    // decode token
-    if (token) {
-      // verifies secret and checks exp
-      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) {
-          res.status(401).json({
-            success: false,
-            message: 'Failed to authenticate token.',
-            errorCode: 'UNAUTHORISED',
-          });
-        } else {
-          // if everything is good, save payload details in request object for use in other routes
-          req.requesterData = decoded;
-          // do logging or whatever is needed
-          next();
-        }
-      });
-    } else {
-      // if there is no token, return an error
-      res.status(401).json({
-        success: false,
-        message: 'No token provided. Please refer to docs to how to send your token.',
-        errorCode: 'NO_TOKEN',
-      });
-    }
-  });
+  router.use(middlewares.JWTVerifier);
   // Any routes initiated below this line will be checked by the JWT auth middleware defined above
 
   // --- PROTECTED ROUTES --- //

@@ -5,6 +5,9 @@
  * PUT      /users/:user_id - Updates a specific user
  * DELETE   /users/:user_id - Deletes a specific user
  */
+const userService = require('../services/user');
+const { ERROR_CODES } = require('../constants');
+
 module.exports = function userRoutes(router) {
   // --------------------------------------------------------------------------------------------
   // on routes that end in /users
@@ -14,10 +17,10 @@ module.exports = function userRoutes(router) {
      * @desc Get all Users (accessed at GET http://host:port/api/users?prop1=val1&prop2=val2&sort=-prop1,prop2)
      */
     .get((req, res) => {
-      global.userService.read(req.query).then((users) => {
-        res.status(200).json(users);
+      userService.read(req.query).then((users) => {
+        res.status(users.statusCode || 200).json(users);
       }, (err) => {
-        res.status(400).json(err);
+        res.status(err.statusCode || 400).json(err);
       });
     });
   // --------------------------------------------------------------------------------------------
@@ -28,14 +31,10 @@ module.exports = function userRoutes(router) {
      * @desc get the user with that id (accessed at GET http://localhost:8080/api/users/:user_id)
      */
     .get((req, res) => {
-      global.userService.read(req.params).then((user) => {
-        if (user.error === '404') {
-          res.status(user.error).json(user);
-        } else {
-          res.status(200).json(user);
-        }
+      userService.read(req.params).then((user) => {
+        res.status(user.statusCode || 200).json(user);
       }, (err) => {
-        res.status(400).json(err);
+        res.status(err.statusCode || 400).json(err);
       });
     })
     /**
@@ -44,21 +43,18 @@ module.exports = function userRoutes(router) {
     .put((req, res) => {
       // Check permission
       const requestedData = { userId: req.params.user_id };
-      if (global.userService.isAuthorised(requestedData, req.requesterData)) {
-        global.userService.update(req.params.user_id, req.body).then((user) => {
-          if (user.error === '404') {
-            res.status(user.error).json(user);
-          } else {
-            res.status(200).json(user);
-          }
+      if (userService.isAuthorised(requestedData, req.requesterData)) {
+        userService.update(req.params.user_id, req.body).then((user) => {
+          res.status(user.statusCode || 200).json(user);
         }, (err) => {
-          res.status(400).json(err);
+          res.status(err.statusCode || 400).json(err);
         });
       } else {
-        res.status(401).json({
+        res.status(403).json({
           success: false,
-          message: 'You are not authorised to carry out this operation.',
-          error: 'UNAUTHORISED',
+          message: 'You do not have permission to carry out this operation.',
+          errorCode: ERROR_CODES.FORBIDDEN,
+          statusCode: 403,
         });
       }
     })
@@ -68,17 +64,18 @@ module.exports = function userRoutes(router) {
     .delete((req, res) => {
       // Check permission
       const requestedData = { userId: req.params.user_id };
-      if (global.userService.isAuthorised(requestedData, req.requesterData)) {
-        global.userService.update(req.params.user_id, { isDeleted: true }).then((user) => {
-          res.status(200).json(user);
+      if (userService.isAuthorised(requestedData, req.requesterData)) {
+        userService.update(req.params.user_id, { isDeleted: true }).then((data) => {
+          res.status(data.statusCode || 200).json(data);
         }, (err) => {
-          res.status(400).json(err);
+          res.status(err.statusCode || 400).json(err);
         });
       } else {
-        res.status(401).json({
+        res.status(403).json({
           success: false,
-          message: 'You are not authorised to carry out this operation.',
-          error: 'UNAUTHORISED',
+          message: 'You do not have permission to carry out this operation.',
+          error: ERROR_CODES.FORBIDDEN,
+          statusCode: 403,
         });
       }
     });

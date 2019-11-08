@@ -51,6 +51,7 @@ module.exports = (function createUserSchema() {
   // Adding virtual properties
   // Age
   userSchema.virtual('age').get(() => {
+    if (!this.dob) return null;
     const now = moment.utc();
     const dob = moment.utc(this.dob);
     return now.diff(dob, 'years');
@@ -95,7 +96,7 @@ module.exports = (function createUserSchema() {
 
   userSchema.methods.createAccessToken = function createAccessToken() {
     const requesterData = {
-      _id: this._id, // eslint-disable-line
+      id: this.id,
       email: this.email,
       isAdmin: this.isAdmin,
     };
@@ -108,7 +109,7 @@ module.exports = (function createUserSchema() {
 
   userSchema.methods.createRefreshToken = function createRefreshToken() {
     const requesterData = {
-      _id: this._id, // eslint-disable-line
+      id: this.id,
       email: this.email,
       isAdmin: this.isAdmin,
       tokenType: 'REFRESH',
@@ -118,6 +119,26 @@ module.exports = (function createUserSchema() {
       issuer: process.env.JWT_ISSUER,
     });
     return token;
+  };
+
+  /**
+   * Transforms the user object to client friendly format
+   */
+  userSchema.methods.toClient = function toClient() {
+    const obj = this.toObject({ virtuals: true });
+    // Rename fields and remove sensitive fields
+    const {
+      _id,
+      password,
+      isDeleted,
+      isAdmin,
+      isEmailVerified,
+      __v,
+      ...rest
+    } = obj;
+    const userData = { ...rest };
+
+    return userData;
   };
 
   // Creating a Model

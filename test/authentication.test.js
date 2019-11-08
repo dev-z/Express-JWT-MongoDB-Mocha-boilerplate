@@ -4,6 +4,7 @@
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const server = require('../server');
+const User = require('../app/models/User');
 
 const should = chai.should();
 
@@ -18,7 +19,7 @@ describe('Authentication', function () {
       // Create global variable for storing some temp data.
       global.tests = {};
       // Clear User table
-      global.User.remove({}, function (err) {
+      User.remove({}, function (err) {
         if (err) {
           console.error('Error in clearing User model. ', err);
         }

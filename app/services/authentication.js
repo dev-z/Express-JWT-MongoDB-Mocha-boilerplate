@@ -81,14 +81,7 @@ module.exports = (function authentication() {
                     statusCode: 200,
                   });
                 } else {
-                  const userObj = {
-                    _id: user._id, // eslint-disable-line
-                    name: user.name,
-                    email: user.email,
-                    mobile: user.mobile,
-                    dob: user.dob,
-                    doj: user.doj,
-                  };
+                  const userObj = user.toClient();
                   const accessToken = user.createAccessToken();
                   const refreshToken = user.createRefreshToken();
                   // return the information including token as JSON
@@ -116,25 +109,29 @@ module.exports = (function authentication() {
    * @returns {Promise}
    */
   function authenticateByRefreshToken(refreshToken) {
-    return new Promise((resolve) => resolve({ message: 'Not implemented' }));
+    return new Promise((resolve) => resolve({
+      message: 'Not implemented',
+      refresh_token: refreshToken,
+    }));
   }
 
   function authenticate(body) {
     return new Promise((resolve, reject) => {
-      if (!body.grant_type) {
+      if (!body.grantType) {
         reject({
+          success: false,
           message: '"grant_type" field is required',
           errorCode: ERROR_CODES.MISSING_REQUIRED_FIELD,
           statusCode: 400,
         });
-      } else if (body.grant_type === GRANT_TYPES.REFRESH_TOKEN) {
+      } else if (body.grantType === GRANT_TYPES.REFRESH_TOKEN) {
         authenticateByRefreshToken(body.refresh_token)
           .then((res) => {
             resolve(res);
           }, (err) => {
             reject(err);
           });
-      } else if (body.grant_type === GRANT_TYPES.PASSWORD) {
+      } else if (body.grantType === GRANT_TYPES.PASSWORD) {
         authenticateByPassword(body.email, body.password)
           .then((res) => {
             resolve(res);
@@ -143,6 +140,7 @@ module.exports = (function authentication() {
           });
       } else {
         reject({
+          success: false,
           message: '"grant_type" has invalid value',
           errorCode: ERROR_CODES.INVALID_FIELD_VALUE,
           statusCode: 400,
