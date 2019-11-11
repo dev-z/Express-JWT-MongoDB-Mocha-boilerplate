@@ -82,7 +82,8 @@ node node_modules/eslint/bin/eslint --ext .js server.js app
 
 Uses Mocha adn ChaiJS to run automated tests. You can use the results to integrate with CI/CD tools.
 Run the command "npm test" to run the tests.
-> Please note that running the tests clears the database, so DON'T RUN THE TESTS WHEN CONNECTED TO YOUR PRODUCTION DATABASE.
+> Please note that running the tests clears the database. I have configured the scripts and code to use a mock db for the tests.
+> In any case, please DO NOT override these settings and run the tests while connected to production database. You have been warned, and such a disaster is in no way, my fault.
 
 Run tests with command:
 ```bash
