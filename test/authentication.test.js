@@ -1,5 +1,4 @@
-/* eslint-disable prefer-arrow-callback, comma-dangle,
- no-unused-expressions, no-unused-vars */
+/* eslint-disable no-unused-expressions, no-unused-vars */
 // Require the dev-dependencies
 const chai = require('chai');
 const chaiHttp = require('chai-http');
@@ -11,7 +10,7 @@ const { AUTH_TOKEN_TYPE, ERROR_CODES } = require('../app/constants');
 const should = chai.should();
 chai.use(chaiHttp);
 
-describe('Authentication', function testAuth() {
+describe('Authentication', () => {
   // --- Variables
   let tests = {};
   // --- HOOKS ----------------------------------------------------------------------- //
@@ -271,7 +270,7 @@ describe('Authentication', function testAuth() {
         .post('/api/v1/auth/login')
         .send({
           grant_type: 'password',
-          email: tests.user.email
+          email: tests.user.email,
         })
         .end((err, res) => {
           if (err) {
@@ -349,10 +348,10 @@ describe('Authentication', function testAuth() {
         .send({
           grant_type: 'password',
           email: {
-            $ne: 1 // email not equal to 1
+            $ne: 1, // email not equal to 1
           },
           password: {
-            $ne: 1 // password not equal to 1
+            $ne: 1, // password not equal to 1
           },
         })
         .end((err, res) => {

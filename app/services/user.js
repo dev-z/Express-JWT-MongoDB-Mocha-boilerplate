@@ -46,15 +46,24 @@ module.exports = (function userService() {
         User.findById(rawFilters.user_id, (err, user) => {
           if (err) {
             console.error(err);
-            reject({
-              success: false,
-              message: 'Something went wrong',
-              statusCode: 500,
-              errorCode: ERROR_CODES.USER.READ_FAILED,
-            });
+            if (err.name === 'CastError' && err.kind === 'ObjectId') {
+              reject({
+                success: false,
+                message: 'Invalid user id',
+                statusCode: 400,
+                errorCode: ERROR_CODES.INVALID_FIELD_VALUE,
+              });
+            } else {
+              reject({
+                success: false,
+                message: 'Something went wrong',
+                statusCode: 500,
+                errorCode: ERROR_CODES.USER.READ_FAILED,
+              });
+            }
           } else if (!user) {
             reject({
-              success: true,
+              success: false,
               message: 'User not found',
               statusCode: 404,
               errorCode: ERROR_CODES.USER.NOT_FOUND,
@@ -126,17 +135,23 @@ module.exports = (function userService() {
         { new: true, strict: true, runValidators: true },
         (err, updtUser) => {
           if (err) {
+            console.error(err);
             let message = 'Failed to update user';
             let errorCode = ERROR_CODES.USER.UPDATE_FAILED;
+            let statusCode = 500;
             if (docToUpdate.isDeleted) {
               message = 'Failed to delete user';
               errorCode = ERROR_CODES.USER.DELETE_FAILED;
             }
-            console.error(err);
+            if (err.name === 'CastError' && err.kind === 'ObjectId') {
+              message = 'Invalid user id';
+              errorCode = ERROR_CODES.INVALID_FIELD_VALUE;
+              statusCode = 400;
+            }
             reject({
               success: false,
               message,
-              statusCode: 500,
+              statusCode,
               errorCode,
             });
           } else if (!updtUser) {

@@ -74,7 +74,7 @@ module.exports = function userRoutes(router) {
         res.status(403).json({
           success: false,
           message: 'You do not have permission to carry out this operation.',
-          error: ERROR_CODES.FORBIDDEN,
+          errorCode: ERROR_CODES.FORBIDDEN,
           statusCode: 403,
         });
       }

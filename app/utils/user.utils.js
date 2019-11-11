@@ -54,6 +54,13 @@ module.exports = (function userUtils() {
             errorCode: err.code || ERROR_CODES.INVALID_FIELD_VALUE,
             statusCode: 400,
           };
+        case 'CastError':
+          return {
+            success: false,
+            message: 'Invalid user id',
+            statusCode: 400,
+            errorCode: ERROR_CODES.INVALID_FIELD_VALUE,
+          };
         default:
           return {
             success: false,

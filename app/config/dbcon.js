@@ -36,11 +36,15 @@ function connectDB(mongoUri) {
   const opts = {
     user: process.env.DB_USER,
     pass: process.env.DB_PASS,
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
     autoReconnect: true,
     reconnectTries: 10,
     reconnectInterval: 1000,
+    // The below options are to prevent mongoose from using deprecated internal functions
+    // See: https://mongoosejs.com/docs/deprecations.html
+    useNewUrlParser: true,
+    useFindAndModify: false,
+    useCreateIndex: true,
+    useUnifiedTopology: true,
   };
   console.info(`Using ${process.env.NODE_ENV} environment`);
   console.info(`Connecting to DB @ ${mongoUri}`);
