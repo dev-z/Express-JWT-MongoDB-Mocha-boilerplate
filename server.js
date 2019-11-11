@@ -9,6 +9,7 @@ const cors = require('cors');
 const compression = require('compression');
 const swaggerUI = require('swagger-ui-express');
 
+const { connectDB, getDbUri } = require('./app/config/dbcon');
 const middlewares = require('./app/utils/middlewares');
 const swaggerDoc = require('./openapi.json');
 
@@ -73,17 +74,17 @@ function startServer() {
 
 // START THE SERVER ----------------------------- //
 // 1. Try connecting to DB
-const connectDB = require('./app/config/dbcon');
-
-connectDB().then(() => {
-  // 2. If successful, start server.
-  console.info('DB connection successfull.');
-  startServer();
-}, (err) => {
-  // Otherwise log and stop.
-  console.error('Error connecting to DB. Unable to start API server');
-  console.error(err);
-  process.exit(1);
+getDbUri().then((mongoUri) => {
+  connectDB(mongoUri).then(() => {
+    // 2. If successful, start server.
+    console.info('DB connection successfull.');
+    startServer();
+  }, (err) => {
+    // Otherwise log and stop.
+    console.error('Error connecting to DB. Unable to start API server');
+    console.error(err);
+    process.exit(1);
+  });
 });
 
 module.exports = app;

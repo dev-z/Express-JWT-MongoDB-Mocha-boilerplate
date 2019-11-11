@@ -3,53 +3,56 @@
 // Require the dev-dependencies
 const chai = require('chai');
 const chaiHttp = require('chai-http');
+
 const server = require('../server');
 const User = require('../app/models/User');
+const { AUTH_TOKEN_TYPE, ERROR_CODES } = require('../app/constants');
 
 const should = chai.should();
-
 chai.use(chaiHttp);
 
 describe('Authentication', function testAuth() {
+  // --- Variables
+  let tests = {};
   // --- HOOKS ----------------------------------------------------------------------- //
   // runs before all tests in this block
-  before(function before(done) {
+  before((done) => {
     // A little delay so the DB connection is established and _startServer() is called.
-    setTimeout(function st() {
-      // Create global variable for storing some temp data.
-      global.tests = {};
+    setTimeout(() => {
+      console.info('Performing pre-test cleanups.');
+      // --- Clear all Models --- //
       // Clear User table
-      User.remove({}, function cb(err) {
+      User.deleteMany({}, (err) => {
         if (err) {
           console.error('Error in clearing User model. ', err);
+        } else {
+          console.info('Cleared User model.');
         }
+        done();
       });
-      done();
     }, 2000);
   });
-  // Before each test
-  /* beforeEach(function (done) {
-
-      done();
-  }); */
 
   // runs after all tests in this block
-  after(function (done) {
-    // --- Clear global variables --- //
-    global.tests = undefined;
+  after((done) => {
+    console.info('Performing after test cleanups.');
+    // Clear test reults
+    tests = {};
     // --- Clear all Models --- //
     // Clear User model
-    global.User.remove({}, function (err) {
+    User.deleteMany({}, (err) => {
       if (err) {
         console.error('Error in clearing User model after authentication tests. ', err);
+      } else {
+        console.info('Cleared User model.');
       }
+      done();
     });
-    done();
   });
 
   // --- TESTS ----------------------------------------------------------------------- //
-  describe('/POST users', function () {
-    it('[Pre-requisite] it should create a dummy user to be tested.', function (done) {
+  describe('/POST users', () => {
+    it('[Pre-requisite] it should create a dummy user to be tested.', (done) => {
       chai.request(server)
         .post('/api/v1/users')
         .send({
@@ -58,17 +61,16 @@ describe('Authentication', function testAuth() {
           password: 'abcd123',
           isEmailVerified: true,
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
             res.should.have.status(200);
             res.body.should.be.a('object');
-            res.body.should.have.property('_id')
+            res.body.should.have.property('id')
               .that.is.a('string');
-            global.tests.user = {
-              id: res.body._id,
-              email: res.body.email,
+            tests.user = {
+              ...res.body,
               password: 'abcd123',
             };
             done();
@@ -76,7 +78,7 @@ describe('Authentication', function testAuth() {
         });
     });
 
-    it('[Pre-requisite] it should create a dummy user (whose account is de-activated) to be tested.', function (done) {
+    it('[Pre-requisite] it should create a dummy user (whose account is de-activated) to be tested.', (done) => {
       chai.request(server)
         .post('/api/v1/users')
         .send({
@@ -86,17 +88,16 @@ describe('Authentication', function testAuth() {
           isDeleted: true,
           isEmailVerified: true,
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
             res.should.have.status(200);
             res.body.should.be.a('object');
-            res.body.should.have.property('_id')
+            res.body.should.have.property('id')
               .that.is.a('string');
-            global.tests.delUser = {
-              id: res.body._id,
-              email: res.body.email,
+            tests.delUser = {
+              ...res.body,
               password: 'abcd123',
             };
             done();
@@ -104,7 +105,7 @@ describe('Authentication', function testAuth() {
         });
     });
 
-    it('[Pre-requisite] it should create a dummy user (whose account is not verified) to be tested.', function (done) {
+    it('[Pre-requisite] it should create a dummy user (whose account is not verified) to be tested.', (done) => {
       chai.request(server)
         .post('/api/v1/users')
         .send({
@@ -112,17 +113,16 @@ describe('Authentication', function testAuth() {
           email: 'testuser3@example.com',
           password: 'abcd123',
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
             res.should.have.status(200);
             res.body.should.be.a('object');
-            res.body.should.have.property('_id')
+            res.body.should.have.property('id')
               .that.is.a('string');
-            global.tests.unverUser = {
-              id: res.body._id,
-              email: res.body.email,
+            tests.unverUser = {
+              ...res.body,
               password: 'abcd123',
             };
             done();
@@ -131,150 +131,223 @@ describe('Authentication', function testAuth() {
     });
   });
 
-  describe('/POST authentication', function () {
+  describe('/POST auth/login', () => {
     // Valid Requests ------------------------------------------------------------------ //
-    it('it should authenticate a user with correct email and password.', function (done) {
+    it('it should authenticate a user with correct email and password.', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
-          email: global.tests.user.email,
-          password: global.tests.user.password,
+          grant_type: 'password',
+          email: tests.user.email,
+          password: tests.user.password,
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
             res.should.have.status(200);
             res.body.should.be.an('object');
             res.body.success.should.be.true;
-            res.body.should.have.property('token')
+            res.body.should.have.property('token_type')
+              .that.is.a('string').that.is.equal(AUTH_TOKEN_TYPE);
+            res.body.should.have.property('access_token')
               .that.is.a('string');
-            global.tests.authToken = res.body.token;
+            res.body.should.have.property('refresh_token')
+              .that.is.a('string');
+            tests.authToken = res.body.access_token;
+            tests.refreshToken = res.body.refresh_token;
             res.body.should.have.property('user')
               .that.is.an('object');
+            res.body.user.should.not.have.property('password');
             done();
           }
         });
     });
     // Invalid Requests ---------------------------------------------------------------- //
-    it('it should NOT authenticate a non-existent user (unknown email).', function (done) {
+    it('it should NOT authenticate request with no grant_type field in body', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
           email: 'idonotexist@example.com',
           password: 'password',
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
-            res.should.have.status(200);
+            res.should.have.status(400);
             res.body.should.be.an('object');
-            res.body.should.not.have.property('token');
             res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.MISSING_REQUIRED_FIELD);
             done();
           }
         });
     });
 
-    it('it should NOT authenticate a user with wrong password.', function (done) {
+    it('it should NOT authenticate a non-existent user (unknown email).', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
-          email: global.tests.user.email,
+          grant_type: 'password',
+          email: 'idonotexist@example.com',
+          password: 'password',
+        })
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(404);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.USER.NOT_FOUND);
+            done();
+          }
+        });
+    });
+
+    it('it should NOT authenticate a user with wrong password.', (done) => {
+      chai.request(server)
+        .post('/api/v1/auth/login')
+        .send({
+          grant_type: 'password',
+          email: tests.user.email,
           password: 'wrongPassword',
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
-            res.should.have.status(200);
+            res.should.have.status(400);
             res.body.should.be.an('object');
-            res.body.should.not.have.property('token');
             res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.USER.INVALID_CREDENTIALS);
             done();
           }
         });
     });
 
-    it('it should NOT authenticate when email id is not supplied', function (done) {
+    it('it should NOT authenticate when email id is not supplied', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
+          grant_type: 'password',
           password: 'wrongPassword',
         })
-        .end(function (err, res) {
-          res.should.have.status(400);
-          res.body.should.be.an('object');
-          res.body.should.not.have.property('token');
-          res.body.should.not.have.property('user');
-          res.body.should.have.property('error').that.is.equal('INVALID_FORMAT');
-          res.body.success.should.be.false;
-          done();
-        });
-    });
-
-    it('it should NOT authenticate when password is not supplied', function (done) {
-      chai.request(server)
-        .post('/api/v1/authentication')
-        .send({
-          email: global.tests.user.email
-        })
-        .end(function (err, res) {
-          res.should.have.status(400);
-          res.body.should.be.an('object');
-          res.body.should.not.have.property('token');
-          res.body.should.not.have.property('user');
-          res.body.should.have.property('error').that.is.equal('INVALID_FORMAT');
-          res.body.success.should.be.false;
-          done();
-        });
-    });
-
-    it('it should NOT authenticate a deactivated user.', function (done) {
-      chai.request(server)
-        .post('/api/v1/authentication')
-        .send({
-          email: global.tests.delUser.email,
-          password: global.tests.delUser.password,
-        })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
-            res.should.have.status(200);
+            res.should.have.status(400);
             res.body.should.be.an('object');
-            res.body.should.not.have.property('token');
             res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.MISSING_REQUIRED_FIELD);
             done();
           }
         });
     });
 
-    it('it should NOT authenticate a unverified user.', function (done) {
+    it('it should NOT authenticate when password is not supplied', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
-          email: global.tests.unverUser.email,
-          password: global.tests.unverUser.password,
+          grant_type: 'password',
+          email: tests.user.email
         })
-        .end(function (err, res) {
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
-            res.should.have.status(200);
+            res.should.have.status(400);
             res.body.should.be.an('object');
-            res.body.should.not.have.property('token');
             res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.MISSING_REQUIRED_FIELD);
             done();
           }
         });
     });
 
-    it('it should NOT accept anything other than strings(to prevent NoSQL injection attacks).', function (done) {
+    it('it should NOT authenticate a deactivated user.', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
+          grant_type: 'password',
+          email: tests.delUser.email,
+          password: tests.delUser.password,
+        })
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(404);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.USER.INACTIVE);
+            done();
+          }
+        });
+    });
+
+    it('it should NOT authenticate a unverified user.', (done) => {
+      chai.request(server)
+        .post('/api/v1/auth/login')
+        .send({
+          grant_type: 'password',
+          email: tests.unverUser.email,
+          password: tests.unverUser.password,
+        })
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(403);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.USER.EMAIL_NOT_VERIFIED);
+            done();
+          }
+        });
+    });
+
+    it('it should NOT accept anything other than strings(to prevent NoSQL injection attacks).', (done) => {
+      chai.request(server)
+        .post('/api/v1/auth/login')
+        .send({
+          grant_type: 'password',
           email: {
             $ne: 1 // email not equal to 1
           },
@@ -282,42 +355,57 @@ describe('Authentication', function testAuth() {
             $ne: 1 // password not equal to 1
           },
         })
-        .end(function (err, res) {
-          res.should.have.status(400);
-          res.body.should.be.an('object');
-          res.body.should.not.have.property('token');
-          res.body.should.not.have.property('user');
-          res.body.should.have.property('error').that.is.equal('INVALID_FORMAT');
-          res.body.success.should.be.false;
-          done();
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(400);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.INVALID_FIELD_VALUE);
+            done();
+          }
         });
     });
 
-    it('it should NOT allow regex expression(to prevent NoSQL injection attacks).', function (done) {
+    it('it should NOT allow regex expression(to prevent NoSQL injection attacks).', (done) => {
       chai.request(server)
-        .post('/api/v1/authentication')
+        .post('/api/v1/auth/login')
         .send({
+          grant_type: 'password',
           email: /a/,
           password: 'abcd123',
         })
-        .end(function (err, res) {
-          res.should.have.status(400);
-          res.body.should.be.an('object');
-          res.body.should.not.have.property('token');
-          res.body.should.not.have.property('user');
-          res.body.should.have.property('error').that.is.equal('INVALID_FORMAT');
-          res.body.success.should.be.false;
-          done();
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(400);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.INVALID_FIELD_VALUE);
+            done();
+          }
         });
     });
   });
 
-  describe('/GET users', function () {
-    it('it should check whether the token is working or not.', function (done) {
+  describe('/GET users', () => {
+    it('it should check whether the token is working or not.', (done) => {
       chai.request(server)
         .get('/api/v1/users')
-        .set('x-access-token', global.tests.authToken)
-        .end(function (err, res) {
+        .set('x-access-token', tests.authToken)
+        .end((err, res) => {
           if (err) {
             done(err);
           } else {
@@ -328,28 +416,48 @@ describe('Authentication', function testAuth() {
         });
     });
 
-    it('it should not authenticate a request with no token.', function (done) {
+    it('it should not authenticate a request with no token.', (done) => {
       chai.request(server)
         .get('/api/v1/users')
-        .end(function (err, res) {
-          res.should.have.status(403);
-          res.body.should.be.a('object');
-          res.body.should.have.property('error').that.is.equal('NO_TOKEN');
-          done();
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(401);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.NO_TOKEN);
+            done();
+          }
         });
     });
 
-    it('it should not authenticate an invalid token.', function (done) {
+    it('it should not authenticate an invalid token.', (done) => {
       // modifying the token a little
-      const invalidToken = global.tests.authToken.replace('a', 'b');
+      const invalidToken = tests.authToken.replace('a', 'b');
       chai.request(server)
         .get('/api/v1/users')
         .set('x-access-token', invalidToken)
-        .end(function (err, res) {
-          res.should.have.status(401);
-          res.body.should.be.a('object');
-          res.body.should.have.property('error').that.is.equal('UNAUTHORISED');
-          done();
+        .end((err, res) => {
+          if (err) {
+            done(err);
+          } else {
+            res.should.have.status(401);
+            res.body.should.be.an('object');
+            res.body.success.should.be.false;
+            res.body.should.not.have.property('token_type');
+            res.body.should.not.have.property('access_token');
+            res.body.should.not.have.property('refresh_token');
+            res.body.should.not.have.property('user');
+            res.body.should.have.property('errorCode')
+              .that.is.a('string').that.is.equal(ERROR_CODES.UNAUTHORISED);
+            done();
+          }
         });
     });
   });

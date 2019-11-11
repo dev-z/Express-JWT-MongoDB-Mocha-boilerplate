@@ -1,6 +1,7 @@
 /* eslint-disable prefer-arrow-callback, func-names, comma-dangle,
  no-unused-expressions, no-unused-vars */
 // Require the dev-dependencies
+/*
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const server = require('../server');
@@ -38,11 +39,6 @@ describe('Users', function () {
       done();
     }, 1000);
   });
-  // Before each test
-  /* beforeEach(function (done) {
-
-      done();
-  }); */
 
   // runs after all tests in this block
   after(function (done) {
@@ -818,3 +814,4 @@ describe('Users', function () {
     });
   });
 });
+*/
