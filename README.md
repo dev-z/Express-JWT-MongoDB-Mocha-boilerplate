@@ -1,4 +1,4 @@
-# Express-JWT-MongoDB-Mocha-boilerplate
+# Express-JWT-MongoDB-Mocha-boilerplate [![Build Status](https://travis-ci.org/dev-z/Express-JWT-MongoDB-Mocha-boilerplate.svg?branch=master)](https://travis-ci.org/dev-z/Express-JWT-MongoDB-Mocha-boilerplate)
 Quickstart your projects with this API server Boilerplate. Uses ExpressJS, MongoDB, JWT, Mocha & Chai.
 
 ## What is this repository for?
