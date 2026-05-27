@@ -23,12 +23,12 @@
     "babel-eslint": "^10.0.3",
     "chai": "^4.2.0",
     "chai-http": "^4.3.0",
-    "eslint": "^6.6.0",
+    "eslint": "^10.4.0",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-loader": "^3.0.2",
     "eslint-plugin-import": "^2.18.2",
     "mocha": "^6.2.2",
-    "mongodb-memory-server": "^6.0.1",
+    "mongodb-memory-server": "^6.9.6",
     "nodemon": "^1.19.4"
   },
   "scripts": {
